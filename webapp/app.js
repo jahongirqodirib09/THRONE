@@ -940,3 +940,71 @@ function handleModalClick(event) {
 /* =========================================================
    NAVIGATION EVENTS
 ============================
+/* ==========================================
+   THRONE GAME CONNECTION
+========================================== */
+
+function openThroneGame() {
+    const game = document.getElementById("throne-game");
+
+    if (!game) {
+        console.error("THRONE game container topilmadi.");
+        return;
+    }
+
+    document
+        .querySelectorAll(".page")
+        .forEach(page => {
+            page.style.display = "none";
+        });
+
+    game.style.display = "block";
+
+    if (
+        window.THRONE_GAME &&
+        typeof window.THRONE_GAME.loadGame === "function"
+    ) {
+        window.THRONE_GAME.loadGame();
+        window.THRONE_GAME.startPolling();
+    }
+}
+
+
+function closeThroneGame() {
+    const game = document.getElementById("throne-game");
+
+    if (!game) {
+        return;
+    }
+
+    game.style.display = "none";
+
+    if (
+        window.THRONE_GAME &&
+        typeof window.THRONE_GAME.stopPolling === "function"
+    ) {
+        window.THRONE_GAME.stopPolling();
+    }
+}
+
+
+window.openThroneGame = openThroneGame;
+window.closeThroneGame = closeThroneGame;
+
+
+/* THRONE game tugmasi */
+document.addEventListener("click", event => {
+
+    const button =
+        event.target.closest(
+            '[data-page="game"], #open-game-button'
+        );
+
+    if (!button) {
+        return;
+    }
+
+    event.preventDefault();
+
+    openThroneGame();
+});
