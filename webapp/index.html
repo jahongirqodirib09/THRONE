@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+
+    <title>THRONE</title>
+
+    <meta
+        name="theme-color"
+        content="#090909"
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- =====================================================
+         LOADING
+    ====================================================== -->
+
+    <div id="loading-screen">
+        <div class="loading-crown">♛</div>
+        <div class="loading-title">THRONE</div>
+        <div class="loading-subtitle">
+            Qirollik yuklanmoqda...
+        </div>
+
+        <div class="loading-line">
+            <div id="loading-progress"></div>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         MAIN APP
+    ====================================================== -->
+
+    <main id="main-app" class="hidden">
+
+        <!-- TOP BAR -->
+
+        <header class="top-bar">
+
+            <div class="brand">
+                <div class="brand-crown">♛</div>
+
+                <div>
+                    <div class="brand-title">
+                        THRONE
+                    </div>
+
+                    <div class="brand-subtitle">
+                        ROYAL KINGDOM
+                    </div>
+                </div>
+            </div>
+
+            <button
+                id="profile-button"
+                class="icon-button"
+                type="button"
+                aria-label="Profil"
+            >
+                👤
+            </button>
+
+        </header>
+
+
+        <!-- =================================================
+             WORLD
+        ================================================== -->
+
+        <section class="world-section">
+
+            <div class="world-header">
+
+                <div>
+                    <div class="section-label">
+                        HOZIRGI OLAM
+                    </div>
+
+                    <h1 id="world-title">
+                        THRONE KINGDOM
+                    </h1>
+                </div>
+
+                <div
+                    id="world-time"
+                    class="world-time"
+                >
+                    DAY
+                </div>
+
+            </div>
+
+
+            <div
+                id="kingdom-scene"
+                class="kingdom-scene day"
+            >
+
+                <div class="sky-glow"></div>
+
+                <div class="moon"></div>
+                <div class="sun"></div>
+
+                <div class="mountain mountain-back"></div>
+                <div class="mountain mountain-front"></div>
+
+                <div class="castle">
+
+                    <div class="castle-tower tower-left">
+                        <div class="tower-roof"></div>
+                        <div class="tower-window"></div>
+                    </div>
+
+                    <div class="castle-main">
+
+                        <div class="castle-roof"></div>
+
+                        <div class="castle-flag">
+                            ⚜
+                        </div>
+
+                        <div class="castle-door"></div>
+
+                        <div class="castle-window window-one"></div>
+                        <div class="castle-window window-two"></div>
+
+                    </div>
+
+                    <div class="castle-tower tower-right">
+                        <div class="tower-roof"></div>
+                        <div class="tower-window"></div>
+                    </div>
+
+                </div>
+
+
+                <!-- Decorative characters -->
+
+                <div class="idle-character character-one">
+                    <div class="character-head"></div>
+                    <div class="character-body"></div>
+                </div>
+
+                <div class="idle-character character-two">
+                    <div class="character-head"></div>
+                    <div class="character-body"></div>
+                </div>
+
+                <div class="idle-character character-three">
+                    <div class="character-head"></div>
+                    <div class="character-body"></div>
+                </div>
+
+                <div class="idle-character character-four">
+                    <div class="character-head"></div>
+                    <div class="character-body"></div>
+                </div>
+
+                <div class="ground"></div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             PLAYER CARD
+        ================================================== -->
+
+        <section class="player-card">
+
+            <div class="avatar-area">
+
+                <div
+                    id="player-avatar"
+                    class="player-avatar"
+                >
+                    ♛
+                </div>
+
+                <div
+                    id="online-status"
+                    class="online-status"
+                >
+                    ONLINE
+                </div>
+
+            </div>
+
+
+            <div class="player-info">
+
+                <div
+                    id="player-name"
+                    class="player-name"
+                >
+                    THRONE PLAYER
+                </div>
+
+                <div class="player-title">
+                    Qirollik fuqarosi
+                </div>
+
+                <div class="level-row">
+
+                    <span>
+                        LEVEL
+                    </span>
+
+                    <strong id="player-level">
+                        1
+                    </strong>
+
+                </div>
+
+                <div class="xp-bar">
+                    <div
+                        id="xp-progress"
+                        class="xp-progress"
+                    ></div>
+                </div>
+
+                <div
+                    id="xp-text"
+                    class="xp-text"
+                >
+                    0 / 100 XP
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             RESOURCES
+        ================================================== -->
+
+        <section class="resource-grid">
+
+            <div class="resource-card gold">
+
+                <div class="resource-icon">
+                    🟡
+                </div>
+
+                <div class="resource-content">
+
+                    <span>
+                        OLTIN
+                    </span>
+
+                    <strong id="gold-value">
+                        0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="resource-card coin">
+
+                <div class="resource-icon">
+                    🪙
+                </div>
+
+                <div class="resource-content">
+
+                    <span>
+                        COIN
+                    </span>
+
+                    <strong id="coin-value">
+                        0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="resource-card diamond">
+
+                <div class="resource-icon">
+                    💎
+                </div>
+
+                <div class="resource-content">
+
+                    <span>
+                        OLMOS
+                    </span>
+
+                    <strong id="diamond-value">
+                        0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="resource-card elite">
+
+                <div class="resource-icon">
+                    ⚜️
+                </div>
+
+                <div class="resource-content">
+
+                    <span>
+                        ELITE
+                    </span>
+
+                    <strong id="elite-value">
+                        FAOL
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             QUICK ACTIONS
+        ================================================== -->
+
+        <section class="quick-actions">
+
+            <button
+                type="button"
+                class="action-card"
+                data-page="kingdom"
+            >
+                <span class="action-icon">
+                    🏰
+                </span>
+
+                <span>
+                    <strong>
+                        Qirolligim
+                    </strong>
+
+                    <small>
+                        Qal'a va hududlar
+                    </small>
+                </span>
+            </button>
+
+
+            <button
+                type="button"
+                class="action-card"
+                data-page="inventory"
+            >
+                <span class="action-icon">
+                    🎒
+                </span>
+
+                <span>
+                    <strong>
+                        Inventar
+                    </strong>
+
+                    <small>
+                        Qurol va kiyimlar
+                    </small>
+                </span>
+            </button>
+
+
+            <button
+                type="button"
+                class="action-card"
+                data-page="clan"
+            >
+                <span class="action-icon">
+                    🏴
+                </span>
+
+                <span>
+                    <strong>
+                        Klanim
+                    </strong>
+
+                    <small>
+                        Klan va ittifoqlar
+                    </small>
+                </span>
+            </button>
+
+
+            <button
+                type="button"
+                class="action-card"
+                data-page="game"
+            >
+                <span class="action-icon">
+                    ⚔️
+                </span>
+
+                <span>
+                    <strong>
+                        O‘yin
+                    </strong>
+
+                    <small>
+                        Guruhdagi jang
+                    </small>
+                </span>
+            </button>
+
+        </section>
+
+
+        <!-- =================================================
+             KINGDOM STATUS
+        ================================================== -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="section-label">
+                        QIROLLIK
+                    </span>
+
+                    <h2>
+                        Hukmronlik holati
+                    </h2>
+                </div>
+
+                <span class="panel-icon">
+                    👑
+                </span>
+
+            </div>
+
+
+            <div class="status-list">
+
+                <div class="status-item">
+
+                    <span>
+                        🏰 Qal'a
+                    </span>
+
+                    <strong id="castle-level">
+                        1-daraja
+                    </strong>
+
+                </div>
+
+
+                <div class="status-item">
+
+                    <span>
+                        🛡️ Mudofaa
+                    </span>
+
+                    <strong id="defense-value">
+                        0
+                    </strong>
+
+                </div>
+
+
+                <div class="status-item">
+
+                    <span>
+                        ⚔️ Harbiy kuch
+                    </span>
+
+                    <strong id="army-power">
+                        0
+                    </strong>
+
+                </div>
+
+
+                <div class="status-item">
+
+                    <span>
+                        🏴 Klan
+                    </span>
+
+                    <strong id="clan-name">
+                        Yo‘q
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             MINI GAME
+        ================================================== -->
+
+        <section
+            id="game-panel"
+            class="panel game-panel"
+        >
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="section-label">
+                        THRONE GAME
+                    </span>
+
+                    <h2>
+                        Guruh o‘yini
+                    </h2>
+                </div>
+
+                <span class="panel-icon">
+                    ⚔️
+                </span>
+
+            </div>
+
+
+            <div class="game-preview">
+
+                <div class="game-crown">
+                    ♛
+                </div>
+
+                <div>
+
+                    <strong>
+                        Qirollik taqdiri
+                    </strong>
+
+                    <p>
+                        Guruhdagi THRONE o‘yini shu yerda
+                        jonli ko‘rinishda namoyish qilinadi.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <button
+                id="open-game-button"
+                type="button"
+                class="primary-button"
+            >
+                ⚔️ O‘YINGA KIRISH
+            </button>
+
+        </section>
+
+
+        <!-- =================================================
+             FRIENDS / LOBBY
+        ================================================== -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="section-label">
+                        LOBBY
+                    </span>
+
+                    <h2>
+                        Qirollik saroyi
+                    </h2>
+                </div>
+
+                <span class="panel-icon">
+                    👥
+                </span>
+
+            </div>
+
+
+            <div class="lobby-grid">
+
+                <div class="lobby-character">
+
+                    <div class="lobby-avatar">
+                        ♛
+                    </div>
+
+                    <span>
+                        Siz
+                    </span>
+
+                    <small class="online">
+                        ONLINE
+                    </small>
+
+                </div>
+
+
+                <div class="lobby-character">
+
+                    <div class="lobby-avatar">
+                        👑
+                    </div>
+
+                    <span>
+                        Saroy
+                    </span>
+
+                    <small>
+                        IDLE
+                    </small>
+
+                </div>
+
+
+                <div class="lobby-character">
+
+                    <div class="lobby-avatar">
+                        ⚔️
+                    </div>
+
+                    <span>
+                        Qo‘mondon
+                    </span>
+
+                    <small>
+                        IDLE
+                    </small>
+
+                </div>
+
+
+                <div class="lobby-character">
+
+                    <div class="lobby-avatar">
+                        🛡️
+                    </div>
+
+                    <span>
+                        Qo‘riqchi
+                    </span>
+
+                    <small>
+                        IDLE
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <button
+                id="invite-button"
+                type="button"
+                class="secondary-button"
+            >
+                🤝 Do‘stlarni taklif qilish
+            </button>
+
+        </section>
+
+
+        <!-- =================================================
+             BOTTOM NAVIGATION
+        ================================================== -->
+
+        <nav class="bottom-navigation">
+
+            <button
+                type="button"
+                class="nav-button active"
+                data-page="home"
+            >
+                <span>♛</span>
+                <small>
+                    Bosh sahifa
+                </small>
+            </button>
+
+
+            <button
+                type="button"
+                class="nav-button"
+                data-page="kingdom"
+            >
+                <span>🏰</span>
+                <small>
+                    Qirollik
+                </small>
+            </button>
+
+
+            <button
+                type="button"
+                class="nav-button"
+                data-page="inventory"
+            >
+                <span>🎒</span>
+                <small>
+                    Inventar
+                </small>
+            </button>
+
+
+            <button
+                type="button"
+                class="nav-button"
+                data-page="clan"
+            >
+                <span>🏴</span>
+                <small>
+                    Klan
+                </small>
+            </button>
+
+
+            <button
+                type="button"
+                class="nav-button"
+                data-page="profile"
+            >
+                <span>👤</span>
+                <small>
+                    Profil
+                </small>
+            </button>
+
+        </nav>
+
+
+        <!-- =================================================
+             MODAL
+        ================================================== -->
+
+        <div
+            id="modal"
+            class="modal hidden"
+        >
+
+            <div class="modal-backdrop"></div>
+
+            <div class="modal-card">
+
+                <button
+                    id="close-modal"
+                    class="close-button"
+                    type="button"
+                >
+                    ×
+                </button>
+
+                <div id="modal-content"></div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+                  </html>
