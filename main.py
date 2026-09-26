@@ -1,281 +1,183 @@
-import os
-from dataclasses import dataclass, field
-from typing import Dict
+import asyncio
+import logging
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
+
+from config import BOT_TOKEN
+
+from database import init_db
+
+from handlers import router as handlers_router
+from group_handlers import router as group_router
+from private_handlers import router as private_router
+from admin_handlers import router as admin_router
+
+
+# ============================================================
+# THRONE — MAIN
+# ============================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 
-
-# =========================================================
-# THRONE — CONFIG
-# =========================================================
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CREATOR_ID = int(os.getenv("CREATOR_ID", "0"))
+logger = logging.getLogger("THRONE")
 
 
-# =========================================================
-# PLAYER DATA
-# =========================================================
+# ============================================================
+# BOT COMMANDS
+# ============================================================
 
-@dataclass
-class Player:
-    user_id: int
-    username: str = ""
-    name: str = ""
+COMMANDS = [
+    ("start", "THRONE'ni ishga tushirish"),
+    ("help", "Yordam"),
+    ("rules", "Qoidalar"),
+    ("profile", "Profil"),
+    ("inventory", "Inventar"),
+    ("wallet", "Hamyon"),
+    ("gold", "Oltin"),
+    ("coin", "Coin"),
+    ("diamond", "Olmos"),
+    ("daily", "Kunlik bonus"),
+    ("kingdom", "Qirollik"),
+    ("castle", "Qal'a"),
+    ("throne", "Taxt"),
+    ("army", "Qo'shin"),
+    ("clan", "Klan"),
+    ("clans", "Klanlar"),
+    ("clanwar", "Klan urushi"),
+    ("map", "Xarita"),
+    ("territory", "Hudud"),
+    ("wars", "Urushlar"),
+    ("market", "Bozor"),
+    ("shop", "Do'kon"),
+    ("transfer", "Oltin o'tkazish"),
+    ("gift", "Sovg'a"),
+    ("ranking", "Reyting"),
+    ("clanranking", "Klan reytingi"),
+    ("stats", "Statistika"),
+    ("settings", "Sozlamalar"),
+]
 
-    level: int = 1
-    xp: int = 0
 
-    gold: int = 0
-    coin: int = 0
-    diamond: int = 0
+# ============================================================
+# SET BOT COMMANDS
+# ============================================================
 
-    elite_pass: bool = False
-
-    games: int = 0
-    wins: int = 0
-    losses: int = 0
-
-
-players: Dict[int, Player] = {}
-
-
-# =========================================================
-# PLAYER CREATION
-# =========================================================
-
-def get_player(user) -> Player:
-    user_id = user.id
-
-    if user_id not in players:
-        creator = user_id == CREATOR_ID
-
-        players[user_id] = Player(
-            user_id=user_id,
-            username=user.username or "",
-            name=user.first_name or "Player",
-            gold=0,
-            coin=0,
-            diamond=0,
-            elite_pass=creator,
+async def setup_commands(bot: Bot):
+    commands = [
+        BotCommand(
+            command=command,
+            description=description,
         )
-
-    player = players[user_id]
-
-    # Always keep creator privileges active
-    if user_id == CREATOR_ID:
-        player.elite_pass = True
-
-    return player
-
-
-# =========================================================
-# RESOURCE DISPLAY
-# =========================================================
-
-def resource_value(player: Player, resource: str) -> str:
-    if player.user_id == CREATOR_ID:
-        return "∞"
-
-    values = {
-        "gold": player.gold,
-        "coin": player.coin,
-        "diamond": player.diamond,
-    }
-
-    return str(values.get(resource, 0))
-
-
-# =========================================================
-# MAIN MENU
-# =========================================================
-
-def main_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton("👤 Profil", callback_data="profile"),
-            InlineKeyboardButton("💰 Resurslar", callback_data="resources"),
-        ],
-        [
-            InlineKeyboardButton("🎮 O‘yin", callback_data="game"),
-            InlineKeyboardButton("🏰 Qirollik", callback_data="kingdom"),
-        ],
-        [
-            InlineKeyboardButton("🎒 Inventar", callback_data="inventory"),
-            InlineKeyboardButton("🛒 Bozor", callback_data="market"),
-        ],
+        for command, description in COMMANDS
     ]
 
-    return InlineKeyboardMarkup(keyboard)
+    await bot.set_my_commands(commands)
 
 
-# =========================================================
-# /START
-# =========================================================
+# ============================================================
+# CREATE BOT
+# ============================================================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    user = update.effective_user
-    player = get_player(user)
-
-    if user.id == CREATOR_ID:
-        text = (
-            "👑 <b>THRONE</b>\n\n"
-            "𓆩 <b>CREATOR</b> 𓆪\n\n"
-            "Qirollik sizning qo‘lingizda.\n\n"
-            "🟡 Oltin: <b>∞</b>\n"
-            "🪙 Coin: <b>∞</b>\n"
-            "💎 Olmos: <b>∞</b>\n"
-            "⚜️ Elite Pass: <b>AKTIV</b>\n\n"
-            "⚔️ Taxt sizni kutmoqda."
-        )
-    else:
-        text = (
-            "👑 <b>THRONE</b>\n\n"
-            "Qirollik seni kutmoqda.\n\n"
-            "⚔️ Taxt uchun kurash.\n"
-            "🕶️ Soya ichidagi xiyonat.\n"
-            "👑 Qirollik taqdiri sening qaroringga bog‘liq."
-        )
-
-    await update.message.reply_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=main_menu(),
+def create_bot() -> Bot:
+    return Bot(
+        token=BOT_TOKEN,
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML,
+        ),
     )
 
 
-# =========================================================
-# PROFILE
-# =========================================================
+# ============================================================
+# CREATE DISPATCHER
+# ============================================================
 
-async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def create_dispatcher() -> Dispatcher:
+    dp = Dispatcher()
 
-    query = update.callback_query
-    await query.answer()
+    # Admin router
+    dp.include_router(admin_router)
 
-    user = query.from_user
-    player = get_player(user)
+    # Group game router
+    dp.include_router(group_router)
 
-    text = (
-        f"👤 <b>{player.name}</b>\n\n"
-        f"⭐ Level: <b>{player.level}</b>\n"
-        f"✨ XP: <b>{player.xp}</b>\n\n"
-        f"🎮 O‘yinlar: <b>{player.games}</b>\n"
-        f"🏆 G‘alabalar: <b>{player.wins}</b>\n"
-        f"☠️ Mag‘lubiyatlar: <b>{player.losses}</b>"
-    )
+    # Private commands/router
+    dp.include_router(private_router)
 
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=main_menu(),
-    )
+    # Main handlers
+    dp.include_router(handlers_router)
+
+    return dp
 
 
-# =========================================================
-# RESOURCES
-# =========================================================
+# ============================================================
+# STARTUP
+# ============================================================
 
-async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def on_startup(bot: Bot):
+    logger.info("THRONE database ishga tushmoqda...")
 
-    query = update.callback_query
-    await query.answer()
+    await init_db()
 
-    player = get_player(query.from_user)
+    await setup_commands(bot)
 
-    text = (
-        "💰 <b>RESURSLAR</b>\n\n"
-        f"🟡 Oltin: <b>{resource_value(player, 'gold')}</b>\n"
-        f"🪙 Coin: <b>{resource_value(player, 'coin')}</b>\n"
-        f"💎 Olmos: <b>{resource_value(player, 'diamond')}</b>\n"
-        f"⚜️ Elite Pass: "
-        f"<b>{'AKTIV' if player.elite_pass else 'FAOL EMAS'}</b>"
-    )
-
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=main_menu(),
-    )
+    logger.info("THRONE database tayyor.")
+    logger.info("THRONE commands o'rnatildi.")
+    logger.info("THRONE BOT IS RUNNING...")
 
 
-# =========================================================
-# OTHER MENU BUTTONS
-# =========================================================
+# ============================================================
+# SHUTDOWN
+# ============================================================
 
-async def simple_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def on_shutdown(bot: Bot):
+    logger.info("THRONE BOT to'xtatilmoqda...")
 
-    query = update.callback_query
-    await query.answer()
+    try:
+        await bot.session.close()
+    except Exception:
+        pass
 
-    pages = {
-        "game": "🎮 <b>O‘YIN</b>\n\nYangi qirollik o‘yini tez orada ishga tushadi.",
-        "kingdom": "🏰 <b>QIROLLIK</b>\n\nSizning qirolligingiz hali qurilmoqda.",
-        "inventory": "🎒 <b>INVENTAR</b>\n\nInventaringiz hozircha bo‘sh.",
-        "market": "🛒 <b>BOZOR</b>\n\nBozor tez orada ochiladi.",
-    }
-
-    text = pages.get(query.data, "THRONE")
-
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=main_menu(),
-    )
+    logger.info("THRONE BOT to'xtadi.")
 
 
-# =========================================================
-# ERROR CHECK
-# =========================================================
+# ============================================================
+# MAIN
+# ============================================================
 
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    print("ERROR:", context.error)
-
-
-# =========================================================
-# RUN BOT
-# =========================================================
-
-def main():
-
+async def main():
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN topilmadi.")
-
-    if CREATOR_ID == 0:
-        raise RuntimeError("CREATOR_ID topilmadi.")
-
-    application = Application.builder().token(BOT_TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-
-    application.add_handler(
-        CallbackQueryHandler(profile, pattern="^profile$")
-    )
-
-    application.add_handler(
-        CallbackQueryHandler(resources, pattern="^resources$")
-    )
-
-    application.add_handler(
-        CallbackQueryHandler(
-            simple_page,
-            pattern="^(game|kingdom|inventory|market)$"
+        raise RuntimeError(
+            "BOT_TOKEN topilmadi. "
+            "Hosting Environment Variables ichiga BOT_TOKEN qo'ying."
         )
-    )
 
-    application.add_error_handler(error_handler)
+    bot = create_bot()
+    dp = create_dispatcher()
 
-    print("👑 THRONE BOT IS RUNNING...")
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
 
-    application.run_polling()
+    try:
+        await dp.start_polling(
+            bot,
+            allowed_updates=dp.resolve_used_update_types(),
+        )
+    finally:
+        await bot.session.close()
 
+
+# ============================================================
+# RUN
+# ============================================================
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("THRONE BOT yopildi.")
