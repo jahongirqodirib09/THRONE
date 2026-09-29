@@ -178,3 +178,159 @@ async def cb_clan_leave(c: CallbackQuery):
 async def cb_clan_create(c: CallbackQuery):
     await c.message.answer("Klan nomini yozing: /createclan NOM")
     await c.answer()
+   @router.message(Command("createclan"))
+async def cmd_createclan(m: Message):
+    parts = m.text.split(maxsplit=1)
+    if len(parts) < 2:
+        return await m.answer("Foydalanish: /createclan NOM")
+    cid = await create_clan(m.from_user.id, parts[1].strip())
+    await m.answer("✅ Klan yaratildi!" if cid else "❌ Bu nom band yoki siz allaqachon klandasiz.")
+
+
+@router.message(Command("joinclan"))
+async def cmd_joinclan(m: Message):
+    parts = m.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        return await m.answer("Foydalanish: /joinclan KLAN_ID")
+    await join_clan(int(parts[1]), m.from_user.id)
+    await m.answer("✅ Klanga qo‘shildingiz (agar mavjud bo‘lsa).")
+
+
+# ============================================================
+# COUPLE / FAMILY
+# ============================================================
+
+@router.callback_query(F.data == "menu:couple")
+async def cb_couple(c: CallbackQuery):
+    await c.message.edit_text(
+        "💕 JUFTLIK\n\nTaklif yuborish: /propose USER_ID\nQabul qilish: /accept PROPOSAL_ID",
+        reply_markup=back_kb())
+    await c.answer()
+
+
+@router.message(Command("propose"))
+async def cmd_propose(m: Message):
+    parts = m.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        return await m.answer("Foydalanish: /propose USER_ID")
+    target = int(parts[1])
+    if target == m.from_user.id:
+        return await m.answer("O‘zingizga taklif yubora olmaysiz.")
+    if not await get_user(target):
+        return await m.answer("❌ Foydalanuvchi topilmadi.")
+    await propose(m.from_user.id, target)
+    await m.answer("💌 Taklif yuborildi.")
+
+
+@router.message(Command("accept"))
+async def cmd_accept(m: Message):
+    parts = m.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        return await m.answer("Foydalanish: /accept PROPOSAL_ID")
+    ok = await accept(int(parts[1]))
+    await m.answer("💍 Taklif qabul qilindi!" if ok else "❌ Taklif topilmadi.")
+
+
+# ============================================================
+# POWER / DUEL
+# ============================================================
+
+@router.callback_query(F.data == "menu:power")
+async def cb_power(c: CallbackQuery):
+    await c.message.edit_text(
+        "⚔️ KUCHLARIM\n\nDuelga chaqirish: /duel USER_ID BET",
+        reply_markup=back_kb())
+    await c.answer()
+
+
+@router.message(Command("duel"))
+async def cmd_duel(m: Message):
+    parts = m.text.split()
+    if len(parts) != 3 or not parts[1].isdigit() or not parts[2].isdigit():
+        return await m.answer("Foydalanish: /duel USER_ID BET")
+    opponent, bet = int(parts[1]), int(parts[2])
+    if opponent == m.from_user.id:
+        return await m.answer("O‘zingizga duel chaqira olmaysiz.")
+    duel_id = await challenge(m.from_user.id, opponent)
+    winner = await resolve(duel_id)
+    if winner == m.from_user.id:
+        await spend(opponent, "gold", bet)
+        await spend(m.from_user.id, "gold", -bet)
+        await m.answer(f"🏆 Siz duelda g‘alaba qozondingiz! +{bet} gold")
+    else:
+        await spend(m.from_user.id, "gold", bet)
+        await spend(opponent, "gold", -bet)
+        await m.answer(f"💀 Siz duelda mag‘lub bo‘ldingiz. -{bet} gold")
+
+
+# ============================================================
+# TOURNAMENT
+# ============================================================
+
+@router.callback_query(F.data == "menu:tournament")
+async def cb_tournament(c: CallbackQuery):
+    tours = await open_tournaments()
+    if not tours:
+        text = "🏆 MUSOBAQALAR\n\nHozircha ochiq musobaqa yo‘q."
+    else:
+        lines = [f"• #{t['id']} {t['name']}" for t in tours]
+        text = "🏆 OCHIQ MUSOBAQALAR\n\n" + "\n".join(lines) + "\n\nQo‘shilish: /jointournament ID"
+    await c.message.edit_text(text, reply_markup=back_kb())
+    await c.answer()
+
+
+@router.message(Command("jointournament"))
+async def cmd_join_tournament(m: Message):
+    parts = m.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        return await m.answer("Foydalanish: /jointournament ID")
+    await join_tournament(int(parts[1]), m.from_user.id)
+    await m.answer("✅ Musobaqaga qo‘shildingiz.")
+
+
+# ============================================================
+# RANKING
+# ============================================================
+
+@router.callback_query(F.data == "menu:ranking")
+async def cb_ranking(c: CallbackQuery):
+    from database import db
+    async with db() as conn:
+        cur = await conn.execute("SELECT full_name, level, gold FROM users ORDER BY level DESC, gold DESC LIMIT 10")
+        rows = await cur.fetchall()
+    lines = [f"{i+1}. {r['full_name']} — ⭐{r['level']}" for i, r in enumerate(rows)]
+    await c.message.edit_text("📊 REYTING (TOP 10)\n\n" + "\n".join(lines), reply_markup=back_kb())
+    await c.answer()
+
+
+# ============================================================
+# BONUS (daily)
+# ============================================================
+
+@router.callback_query(F.data == "menu:bonus")
+async def cb_bonus(c: CallbackQuery):
+    from database import db, now
+    async with db() as conn:
+        cur = await conn.execute("SELECT last_active FROM users WHERE user_id=?", (c.from_user.id,))
+        row = await cur.fetchone()
+        await conn.execute("UPDATE users SET gold=gold+500 WHERE user_id=?", (c.from_user.id,))
+    await c.answer("🎁 Kunlik bonus: +500 gold!", show_alert=True)
+
+
+# ============================================================
+# ELITE
+# ============================================================
+
+def elite_kb():
+    rows = [[InlineKeyboardButton(text=f"⭐ {plan} — {stars}⭐", callback_data=f"elite:star:{plan}")]
+            for plan, (days, stars) in ELITE_STAR_PLANS.items()]
+    rows.append([InlineKeyboardButton(text="⬅️ ORQAGA", callback_data="menu:back")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+@router.callback_query(F.data == "menu:elite")
+async def cb_elite(c: CallbackQuery):
+    is_e = await elite_active(c.from_user.id)
+    text = f"⚜️ THRONE ELITE\n\nHolat: {'✅ AKTIV' if is_e else '❌ Yo‘q'}\n\nTelegram Stars orqali sotib oling:"
+    await c.message.edit_text(text, reply_markup=elite_kb())
+    await c.answer() 
