@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Any
 
 
 class GamePhase(str, Enum):
-    WAITING = "waiting"
-    STARTING = "starting"
+    """THRONE o‘yin bosqichlari."""
+
+    LOBBY = "lobby"
     NIGHT = "night"
     DAY = "day"
     VOTING = "voting"
@@ -16,170 +17,249 @@ class GamePhase(str, Enum):
 
 @dataclass
 class PlayerState:
-    user_id: int
-    name: str
-    username: Optional[str] = None
+    """Bitta o‘yinchining joriy o‘yindagi holati."""
 
-    role: Optional[str] = None
-    side: Optional[str] = None
+    user_id: int
+    username: str | None = None
+    first_name: str = ""
+
+    role_id: str | None = None
+    team: str | None = None
 
     alive: bool = True
     joined: bool = True
-    inactive_nights: int = 0
 
-    final_words_given: bool = False
-    voted: bool = False
+    voted_for: int | None = None
+
+    night_action_used: bool = False
+    day_message_sent: bool = False
+
+    inactivity_count: int = 0
+
+    # Keyinchalik himoya, hujum va maxsus qobiliyatlar
+    # shu maydon orqali boshqariladi.
+    protection_used: bool = False
+    escape_used: bool = False
+
+    # Oshpaz kabi maxsus rollar uchun vaqtinchalik ma'lumotlar.
+    temporary_data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class GameState:
-    group_id: int
+    """Bitta Telegram guruhidagi THRONE o‘yinining holati."""
 
-    phase: GamePhase = GamePhase.WAITING
-    day_number: int = 0
+    chat_id: int
+
+    phase: GamePhase = GamePhase.LOBBY
 
     players: dict[int, PlayerState] = field(default_factory=dict)
 
+    # Lobby va o‘yin vaqtlarini boshqarish uchun.
+    phase_started_at: float | None = None
+    phase_ends_at: float | None = None
+
+    # O‘yin boshlanishidan oldingi countdown.
+    countdown_started: bool = False
+
+    # O‘yin tugagan yoki yo‘qligi.
+    finished: bool = False
+
+    # Ovozlar.
     votes: dict[int, int] = field(default_factory=dict)
 
-    night_actions: dict[int, dict] = field(default_factory=dict)
+    # Kechasi bajariladigan harakatlar.
+    night_actions: dict[int, dict[str, Any]] = field(default_factory=dict)
 
-    day_time: int = 45
-    vote_time: int = 45
-    night_time: int = 60
-    start_time: int = 30
+    # Shu tun/kundagi muhim hodisalar.
+    events: list[dict[str, Any]] = field(default_factory=list)
 
-    game_message_id: Optional[int] = None
-    phase_message_id: Optional[int] = None
+    # G‘olib tomon.
+    winner_team: str | None = None
 
-    started: bool = False
-    ended: bool = False
-
-    winner: Optional[str] = None
+    # O‘yin uchun qo‘shimcha ma'lumotlar.
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_player(
         self,
         user_id: int,
-        name: str,
-        username: Optional[str] = None,
+        username: str | None = None,
+        first_name: str = "",
     ) -> bool:
-        if self.started:
+        """O‘yinchining lobbyga qo‘shilishini ta'minlaydi."""
+
+        if self.finished:
             return False
 
         if user_id in self.players:
+            player = self.players[user_id]
+
+            if username is not None:
+                player.username = username
+
+            if first_name:
+                player.first_name = first_name
+
+            player.joined = True
             return False
 
         self.players[user_id] = PlayerState(
             user_id=user_id,
-            name=name,
             username=username,
+            first_name=first_name,
         )
+
         return True
 
     def remove_player(self, user_id: int) -> bool:
+        """O‘yinchi lobbydan yoki o‘yindan chiqariladi."""
+
         if user_id not in self.players:
             return False
 
-        if self.started:
-            self.players[user_id].joined = False
-            self.players[user_id].alive = False
-        else:
-            del self.players[user_id]
+        del self.players[user_id]
+        self.votes.pop(user_id, None)
+        self.night_actions.pop(user_id, None)
 
         return True
 
-    def get_player(self, user_id: int) -> Optional[PlayerState]:
+    def get_player(self, user_id: int) -> PlayerState | None:
+        """O‘yinchini ID orqali qaytaradi."""
+
         return self.players.get(user_id)
 
     def alive_players(self) -> list[PlayerState]:
+        """Tirik o‘yinchilar ro‘yxati."""
+
         return [
             player
             for player in self.players.values()
-            if player.joined and player.alive
+            if player.alive and player.joined
         ]
 
-    def alive_count(self) -> int:
-        return len(self.alive_players())
+    def dead_players(self) -> list[PlayerState]:
+        """O‘lgan o‘yinchilar ro‘yxati."""
+
+        return [
+            player
+            for player in self.players.values()
+            if not player.alive
+        ]
+
+    def joined_players(self) -> list[PlayerState]:
+        """O‘yinga qo‘shilgan barcha o‘yinchilar."""
+
+        return [
+            player
+            for player in self.players.values()
+            if player.joined
+        ]
 
     def player_count(self) -> int:
-        return len(
-            [
-                player
-                for player in self.players.values()
-                if player.joined
-            ]
-        )
+        """O‘yindagi jami o‘yinchilar soni."""
+
+        return len(self.joined_players())
+
+    def alive_count(self) -> int:
+        """Tirik o‘yinchilar soni."""
+
+        return len(self.alive_players())
 
     def kill_player(self, user_id: int) -> bool:
-        player = self.players.get(user_id)
+        """O‘yinchini o‘ldirilgan holatga o‘tkazadi."""
+
+        player = self.get_player(user_id)
 
         if player is None or not player.alive:
             return False
 
         player.alive = False
-        player.voted = False
+        player.voted_for = None
+
+        return True
+
+    def revive_player(self, user_id: int) -> bool:
+        """Kelajakdagi maxsus qobiliyatlar uchun tiriltirish."""
+
+        player = self.get_player(user_id)
+
+        if player is None or player.alive:
+            return False
+
+        player.alive = True
+        return True
+
+    def set_role(
+        self,
+        user_id: int,
+        role_id: str,
+        team: str,
+    ) -> bool:
+        """O‘yinchiga rol va jamoa beradi."""
+
+        player = self.get_player(user_id)
+
+        if player is None:
+            return False
+
+        player.role_id = role_id
+        player.team = team
+
         return True
 
     def reset_votes(self) -> None:
+        """Ovozlarni tozalaydi."""
+
         self.votes.clear()
 
         for player in self.players.values():
-            player.voted = False
+            player.voted_for = None
 
-    def register_vote(
+    def add_vote(
         self,
         voter_id: int,
-        target_id: Optional[int],
+        target_id: int,
     ) -> bool:
-        """
-        Har bir tirik o'yinchi faqat 1 ta ovoz beradi.
+        """Ovoz qo‘shadi yoki mavjud ovozni yangilaydi."""
 
-        target_id=None -> Ovoz bermaslik.
-        Hech qanday rol ovoz kuchini o'zgartirmaydi.
-        """
-        voter = self.players.get(voter_id)
+        voter = self.get_player(voter_id)
+        target = self.get_player(target_id)
 
-        if voter is None:
+        if voter is None or target is None:
             return False
 
-        if not voter.alive or not voter.joined:
+        if not voter.alive or not target.alive:
             return False
 
-        if voter.voted:
+        if self.phase != GamePhase.VOTING:
             return False
 
-        if target_id is not None:
-            target = self.players.get(target_id)
-
-            if target is None:
-                return False
-
-            if not target.alive or not target.joined:
-                return False
-
-        self.votes[voter_id] = target_id if target_id is not None else 0
-        voter.voted = True
+        self.votes[voter_id] = target_id
+        voter.voted_for = target_id
 
         return True
 
     def vote_counts(self) -> dict[int, int]:
+        """Har bir o‘yinchiga berilgan ovozlar sonini hisoblaydi."""
+
         counts: dict[int, int] = {}
 
         for target_id in self.votes.values():
-            if target_id == 0:
+            target = self.get_player(target_id)
+
+            if target is None or not target.alive:
                 continue
 
             counts[target_id] = counts.get(target_id, 0) + 1
 
         return counts
 
-    def voting_result(self) -> Optional[int]:
-        """
-        Eng ko'p ovoz olgan tirik o'yinchini qaytaradi.
+    def most_voted_player(self) -> int | None:
+        """Eng ko‘p ovoz olgan o‘yinchini qaytaradi.
 
-        Agar durang bo'lsa -> None.
-        Agar ovoz berilmasa -> None.
+        Tenglik bo‘lsa hech kim chiqarilmaydi.
         """
+
         counts = self.vote_counts()
 
         if not counts:
@@ -187,83 +267,138 @@ class GameState:
 
         highest = max(counts.values())
 
-        leaders = [
-            player_id
-            for player_id, count in counts.items()
+        winners = [
+            user_id
+            for user_id, count in counts.items()
             if count == highest
         ]
 
-        if len(leaders) != 1:
+        if len(winners) != 1:
             return None
 
-        target_id = leaders[0]
+        return winners[0]
 
-        target = self.players.get(target_id)
+    def set_phase(
+        self,
+        phase: GamePhase,
+        started_at: float | None = None,
+        ends_at: float | None = None,
+    ) -> None:
+        """O‘yin bosqichini almashtiradi."""
 
-        if target is None or not target.alive:
-            return None
+        self.phase = phase
+        self.phase_started_at = started_at
+        self.phase_ends_at = ends_at
 
-        return target_id
+        if phase != GamePhase.VOTING:
+            self.reset_votes()
 
-    def clear_night_actions(self) -> None:
-        self.night_actions.clear()
+        if phase != GamePhase.NIGHT:
+            self.night_actions.clear()
 
     def set_night_action(
         self,
         user_id: int,
-        action: dict,
+        action: dict[str, Any],
     ) -> bool:
-        player = self.players.get(user_id)
+        """O‘yinchining tungi harakatini saqlaydi."""
+
+        player = self.get_player(user_id)
 
         if player is None or not player.alive:
             return False
 
+        if self.phase != GamePhase.NIGHT:
+            return False
+
         self.night_actions[user_id] = action
+        player.night_action_used = True
+
         return True
 
-    def get_night_action(self, user_id: int) -> Optional[dict]:
+    def get_night_action(
+        self,
+        user_id: int,
+    ) -> dict[str, Any] | None:
+        """O‘yinchining tungi harakatini qaytaradi."""
+
         return self.night_actions.get(user_id)
 
-    def next_day(self) -> None:
-        self.day_number += 1
-        self.phase = GamePhase.DAY
-        self.reset_votes()
-        self.clear_night_actions()
+    def add_event(
+        self,
+        event_type: str,
+        **data: Any,
+    ) -> None:
+        """O‘yinda sodir bo‘lgan hodisani saqlaydi."""
 
-    def start_night(self) -> None:
-        self.phase = GamePhase.NIGHT
-        self.clear_night_actions()
+        self.events.append(
+            {
+                "type": event_type,
+                **data,
+            }
+        )
 
-    def start_voting(self) -> None:
-        self.phase = GamePhase.VOTING
-        self.reset_votes()
+    def clear_events(self) -> None:
+        """Joriy bosqich hodisalarini tozalaydi."""
 
-    def start_game(self) -> bool:
-        if self.started:
+        self.events.clear()
+
+    def reset_night_actions(self) -> None:
+        """Tun harakatlarini keyingi tun uchun tozalaydi."""
+
+        self.night_actions.clear()
+
+        for player in self.players.values():
+            player.night_action_used = False
+
+    def reset_day_actions(self) -> None:
+        """Kunlik harakatlarni tozalaydi."""
+
+        for player in self.players.values():
+            player.day_message_sent = False
+
+    def mark_inactive(self, user_id: int) -> bool:
+        """Faol bo‘lmagan o‘yinchining hisoblagichini oshiradi."""
+
+        player = self.get_player(user_id)
+
+        if player is None:
             return False
 
-        if self.player_count() < 4:
-            return False
-
-        self.started = True
-        self.ended = False
-        self.phase = GamePhase.NIGHT
-        self.day_number = 0
-
+        player.inactivity_count += 1
         return True
 
-    def end_game(self, winner: str) -> None:
-        self.phase = GamePhase.ENDED
-        self.ended = True
-        self.winner = winner
+    def reset_inactivity(self, user_id: int) -> bool:
+        """O‘yinchining faollik hisoblagichini nolga qaytaradi."""
 
-    def is_active(self) -> bool:
-        return self.started and not self.ended
+        player = self.get_player(user_id)
 
-    def all_alive_players_voted(self) -> bool:
-        alive = self.alive_players()
-
-        if not alive:
+        if player is None:
             return False
 
-        return all(player.voted for player in alive)
+        player.inactivity_count = 0
+        return True
+
+    def set_winner(self, team: str) -> None:
+        """G‘olib jamoani belgilaydi."""
+
+        self.winner_team = team
+        self.finished = True
+        self.phase = GamePhase.ENDED
+
+    def reset_for_new_game(self) -> None:
+        """Guruhda yangi o‘yin boshlash uchun holatni tozalaydi."""
+
+        self.phase = GamePhase.LOBBY
+        self.phase_started_at = None
+        self.phase_ends_at = None
+
+        self.players.clear()
+        self.votes.clear()
+        self.night_actions.clear()
+        self.events.clear()
+
+        self.winner_team = None
+        self.finished = False
+        self.countdown_started = False
+        self.metadata.clear()
