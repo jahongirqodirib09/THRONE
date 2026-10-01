@@ -1,32 +1,63 @@
 import os
+
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN topilmadi. Railway Variables ichiga BOT_TOKEN qo‘shing.")
+    raise RuntimeError(
+        "BOT_TOKEN topilmadi. Railway Variables ichiga BOT_TOKEN qo‘shing."
+    )
 
-# THRONE asosiy sozlamalari
+
+# =========================
+# THRONE
+# =========================
+
 GAME_NAME = "THRONE"
 GAME_TITLE = "Taxtlar O‘yini 👑⚔️"
 
-# Standart vaqtlar
+
+# =========================
+# O‘YIN VAQTLARI
+# =========================
+
+DEFAULT_GAME_START_TIME = 30
 DEFAULT_DAY_TIME = 45
 DEFAULT_VOTE_TIME = 45
 DEFAULT_NIGHT_TIME = 60
-DEFAULT_GAME_START_TIME = 30
 
-# O‘yin chegaralari
+
+# =========================
+# O‘YINCHILAR
+# =========================
+
 MIN_PLAYERS = 4
-MAX_PLAYERS = 50
+MAX_PLAYERS = 36
 
-# Ma'lumotlar bazasi
+
+# =========================
+# DATABASE
+# =========================
+
 DATABASE_PATH = os.getenv("DATABASE_PATH", "throne.db")
 
-# Creator
+
+# =========================
+# CREATOR
+# =========================
+
 CREATOR_ID = int(os.getenv("CREATOR_ID", "0"))
 
-# WebApp
+
+# =========================
+# MINI APP
+# Hozircha ishlatilmaydi.
+# Keyingi bosqichda ulanadi.
+# =========================
+
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip()
