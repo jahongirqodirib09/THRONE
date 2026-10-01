@@ -19,20 +19,14 @@ class GameMessages:
         )
 
     @staticmethod
-    def player_joined(
-        player: PlayerState,
-        game: GameState,
-    ) -> str:
+    def player_joined(player: PlayerState, game: GameState) -> str:
         return (
             f"⚔️ <b>{player.name}</b> o‘yinga qo‘shildi.\n\n"
             f"👥 O‘yinchilar: <b>{game.player_count()}</b>"
         )
 
     @staticmethod
-    def player_left(
-        player: PlayerState,
-        game: GameState,
-    ) -> str:
+    def player_left(player: PlayerState, game: GameState) -> str:
         return (
             f"🚪 <b>{player.name}</b> o‘yindan chiqdi.\n\n"
             f"👥 O‘yinchilar: <b>{game.player_count()}</b>"
@@ -102,10 +96,7 @@ class GameMessages:
         )
 
     @staticmethod
-    def player_eliminated(
-        player: PlayerState,
-        votes: int,
-    ) -> str:
+    def player_eliminated(player: PlayerState, votes: int) -> str:
         role = get_role(player.role) if player.role else None
         role_name = role.name if role else "Noma’lum rol"
 
@@ -120,10 +111,7 @@ class GameMessages:
     def players_list(game: GameState) -> str:
         lines = ["👥 <b>O‘yinchilar</b>\n"]
 
-        for index, player in enumerate(
-            game.players.values(),
-            start=1,
-        ):
+        for index, player in enumerate(game.players.values(), start=1):
             if not player.joined:
                 status = "🚪 Chiqdi"
             elif player.alive:
@@ -131,17 +119,12 @@ class GameMessages:
             else:
                 status = "☠️ Halok bo‘lgan"
 
-            lines.append(
-                f"{index}. {player.name} — {status}"
-            )
+            lines.append(f"{index}. {player.name} — {status}")
 
         return "\n".join(lines)
 
     @staticmethod
-    def death_message(
-        player: PlayerState,
-        cause: str = "night",
-    ) -> str:
+    def death_message(player: PlayerState, cause: str = "night") -> str:
         role_key = player.role or ""
         name = player.name
 
@@ -291,27 +274,15 @@ class GameMessages:
             ),
         }
 
-        message = messages.get(
-            role_key,
-            f"☠️ {name} vafot etdi.",
-        )
+        message = messages.get(role_key, f"☠️ {name} vafot etdi.")
 
         if cause == "vote":
-            return (
-                f"{message}\n\n"
-                "🗳️ Sabab: kunduzgi ovoz berish."
-            )
+            return f"{message}\n\n🗳️ Sabab: kunduzgi ovoz berish."
 
-        return (
-            f"{message}\n\n"
-            "🌙 Sabab: tungi voqea."
-        )
+        return f"{message}\n\n🌙 Sabab: tungi voqea."
 
     @staticmethod
-    def survived_attack(
-        player: PlayerState,
-        reason: str,
-    ) -> str:
+    def survived_attack(player: PlayerState, reason: str) -> str:
         return (
             f"🛡️ <b>{player.name}</b> tungi hujumdan omon qoldi.\n"
             f"🔰 Sabab: {reason}"
@@ -354,10 +325,7 @@ class GameMessages:
         )
 
     @staticmethod
-    def victory(
-        winner: str,
-        message: str | None = None,
-    ) -> str:
+    def victory(winner: str, message: str | None = None) -> str:
         if message:
             return (
                 "🏆 <b>THRONE — O‘YIN YAKUNLANDI</b>\n\n"
@@ -374,9 +342,7 @@ class GameMessages:
     @staticmethod
     def role_card(player: PlayerState) -> str:
         if not player.role:
-            return (
-                "🎭 <b>Sizga rol berilmadi.</b>"
-            )
+            return "🎭 <b>Sizga rol berilmadi.</b>"
 
         role = get_role(player.role)
 
@@ -399,7 +365,7 @@ class GameMessages:
         game: GameState,
         player: PlayerState,
     ) -> str:
-        if player.side != Side.SHOADOW.value:
+        if player.side != Side.SHADOW.value:
             return ""
 
         teammates = []
@@ -408,7 +374,7 @@ class GameMessages:
             if (
                 other.user_id != player.user_id
                 and other.joined
-                and other.side == Side.SHOADOW.value
+                and other.side == Side.SHADOW.value
             ):
                 role = get_role(other.role) if other.role else None
                 role_name = role.name if role else "Noma’lum rol"
@@ -439,10 +405,7 @@ class GameMessages:
             GamePhase.ENDED: "Yakunlangan",
         }
 
-        phase_name = phase_names.get(
-            game.phase,
-            "Noma’lum",
-        )
+        phase_name = phase_names.get(game.phase, "Noma’lum")
 
         return (
             "👑 <b>THRONE</b>\n\n"
@@ -465,4 +428,4 @@ class GameMessages:
             "🚫 Durangda hech kim chiqarilmaydi.\n"
             "☠️ Halok bo‘lgan o‘yinchilar ovoz bera olmaydi.\n"
             "🏆 G‘alaba tomon yoki shaxsiy vazifaga bog‘liq."
-        )
+    )
