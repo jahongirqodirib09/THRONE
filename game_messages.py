@@ -1,658 +1,468 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from game_state import GamePhase, GameState, PlayerState
-from roles import get_role
+from roles import Side, get_role
 
 
 class GameMessages:
-    """
-    THRONE o'yinining barcha asosiy matnlarini boshqaradi.
-
-    Bu fayl Telegram API bilan ishlamaydi.
-    Faqat tayyor matnlarni qaytaradi.
-    """
-
-    # =========================================================
-    # O'YIN BOSHLANISHI
-    # =========================================================
+    """THRONE o'yini uchun barcha guruh va shaxsiy xabarlar."""
 
     @staticmethod
     def game_created(game: GameState) -> str:
         return (
-            "👑⚔️ THRONE — TAHTLAR O'YINI\n\n"
-            "Qirollik uchun yangi o'yin ochildi.\n\n"
-            f"👥 O'yinchilar: {game.player_count()}\n"
-            f"🎯 Kerakli minimum: 4\n\n"
-            "👇 O'yinga qo'shilish uchun tugmani bosing."
+            "👑 <b>THRONE — Taxtlar O‘yini</b>\n\n"
+            "Qirollik o‘yin uchun tayyor.\n"
+            "⚔️ O‘yinchilar qo‘shilishini kutmoqda.\n\n"
+            f"👥 O‘yinchilar: <b>{game.player_count()}</b>\n"
+            f"🎯 Kerakli minimum: <b>4</b>\n\n"
+            "👇 Quyidagi tugma orqali o‘yinga qo‘shiling."
         )
 
     @staticmethod
     def player_joined(
-        name: str,
+        player: PlayerState,
         game: GameState,
     ) -> str:
         return (
-            f"⚔️ {name} o'yinga qo'shildi.\n\n"
-            f"👥 O'yinchilar: {game.player_count()}"
+            f"⚔️ <b>{player.name}</b> o‘yinga qo‘shildi.\n\n"
+            f"👥 O‘yinchilar: <b>{game.player_count()}</b>"
         )
 
     @staticmethod
     def player_left(
-        name: str,
-        game: GameState,
-    ) -> str:
-        return (
-            f"🚪 {name} o'yindan chiqdi.\n\n"
-            f"👥 O'yinchilar: {game.player_count()}"
-        )
-
-    @staticmethod
-    def not_enough_players(
-        current: int,
-        minimum: int = 4,
-    ) -> str:
-        return (
-            "⚠️ O'yinni boshlash uchun o'yinchilar yetarli emas.\n\n"
-            f"👥 Hozir: {current}\n"
-            f"🎯 Kerak: kamida {minimum}"
-        )
-
-    @staticmethod
-    def starting(
-        seconds: int,
-        player_count: int,
-    ) -> str:
-        return (
-            "👑⚔️ THRONE BOSHLANMOQDA\n\n"
-            f"👥 O'yinchilar: {player_count}\n"
-            f"⏳ Boshlanishiga: {seconds} soniya\n\n"
-            "Rollar yashirin tarzda taqsimlanadi."
-        )
-
-    # =========================================================
-    # O'YIN BOSHLANGAN
-    # =========================================================
-
-    @staticmethod
-    def game_started(
-        game: GameState,
-    ) -> str:
-        return (
-            "👑⚔️ THRONE — TAHTLAR O'YINI\n\n"
-            "Qirollik o'yini boshlandi.\n\n"
-            f"👥 O'yinchilar: {game.player_count()}\n"
-            f"🎭 Rollar: yashirin\n\n"
-            "📩 Har bir o'yinchiga shaxsiy bot orqali "
-            "uning roli yuboriladi.\n\n"
-            "🌙 Birinchi tun boshlandi."
-        )
-
-    # =========================================================
-    # TUN
-    # =========================================================
-
-    @staticmethod
-    def night_started(
-        game: GameState,
-    ) -> str:
-        return (
-            f"🌙 {game.day_number}-TUN\n\n"
-            "Qirollik sukunatga cho'mdi.\n"
-            "Harakat qiladigan rollar o'z vazifalarini "
-            "shaxsiy bot orqali bajaradi.\n\n"
-            f"⏳ Tun: {game.night_time} soniya"
-        )
-
-    @staticmethod
-    def night_ending(
-        seconds: int,
-    ) -> str:
-        return (
-            "🌙 Tun yakunlanmoqda...\n\n"
-            f"⏳ {seconds} soniya qoldi."
-        )
-
-    @staticmethod
-    def night_no_action(
-        name: str,
-    ) -> str:
-        return (
-            f"⚠️ {name} bu tun harakat qilmadi."
-        )
-
-    # =========================================================
-    # KUN
-    # =========================================================
-
-    @staticmethod
-    def day_started(
-        game: GameState,
-    ) -> str:
-        return (
-            f"☀️ {game.day_number}-KUN\n\n"
-            "Tong otdi. Kechagi tun voqealari "
-            "endi ma'lum bo'ladi.\n\n"
-            f"🕐 Muhokama vaqti: {game.day_time} soniya\n\n"
-            "🗣️ Muhokama qiling va shubhalaringizni ayting."
-        )
-
-    @staticmethod
-    def day_discussion(
-        game: GameState,
-    ) -> str:
-        return (
-            f"☀️ {game.day_number}-kun.\n\n"
-            "🗣️ Muhokama qiling.\n"
-            f"⏳ {game.day_time} soniyadan so'ng "
-            "ovoz berish boshlanadi."
-        )
-
-    # =========================================================
-    # OVOZ BERISH
-    # =========================================================
-
-    @staticmethod
-    def voting_started(
-        game: GameState,
-    ) -> str:
-        return (
-            "🗳️ OVOZ BERISH\n\n"
-            "Kimni qirollikdan chiqarish kerak deb "
-            "hisoblasangiz, tanlang.\n\n"
-            f"⏳ Ovoz berish: {game.vote_time} soniya\n\n"
-            "⚖️ Har bir tirik o'yinchi — 1 ta ovoz.\n"
-            "🚫 Durang bo'lsa, hech kim chiqarilmaydi."
-        )
-
-    @staticmethod
-    def private_voting(
-        game: GameState,
-    ) -> str:
-        return (
-            f"🗳️ {game.day_number}-KUN — OVOZ BERISH\n\n"
-            "Kimni chiqarishni tanlang.\n\n"
-            "⚖️ Har bir tirik o'yinchi faqat 1 ta "
-            "ovozga ega.\n\n"
-            "🚫 Ovoz bermaslik ham mumkin."
-        )
-
-    @staticmethod
-    def vote_received() -> str:
-        return (
-            "✅ Ovozingiz qabul qilindi.\n\n"
-            "Siz bu bosqichda qayta ovoz bera olmaysiz."
-        )
-
-    @staticmethod
-    def vote_not_received() -> str:
-        return (
-            "⚠️ Ovoz qabul qilinmadi.\n"
-            "Qaytadan tekshirib ko'ring."
-        )
-
-    @staticmethod
-    def no_vote() -> str:
-        return (
-            "🚫 Siz bu safar ovoz bermadingiz."
-        )
-
-    @staticmethod
-    def voting_tie() -> str:
-        return (
-            "⚖️ OVOZLAR TENG\n\n"
-            "Hech bir o'yinchi chiqarilmadi.\n\n"
-            "🌙 Keyingi tun boshlandi."
-        )
-
-    # =========================================================
-    # O'YINCHI
-    # =========================================================
-
-    @staticmethod
-    def player_card(
         player: PlayerState,
+        game: GameState,
     ) -> str:
-        role = get_role(player.role)
-
-        role_name = (
-            role.name
-            if role is not None
-            else "Noma'lum"
-        )
-
         return (
-            f"👤 {player.name}\n\n"
-            f"🎭 Rol: {role_name}\n"
-            f"❤️ Holat: "
-            f"{'Tirik' if player.alive else 'Vafot etgan'}"
+            f"🚪 <b>{player.name}</b> o‘yindan chiqdi.\n\n"
+            f"👥 O‘yinchilar: <b>{game.player_count()}</b>"
         )
 
     @staticmethod
-    def alive_players(
-        game: GameState,
+    def starting(game: GameState) -> str:
+        return (
+            "⏳ <b>THRONE</b>\n\n"
+            "👑 Qirollik o‘yinni boshlashga tayyorlanmoqda...\n\n"
+            f"👥 O‘yinchilar: <b>{game.player_count()}</b>\n"
+            f"⏱ Boshlanish: <b>{game.start_time} soniya</b>"
+        )
+
+    @staticmethod
+    def started(game: GameState) -> str:
+        return (
+            "👑 <b>THRONE — O‘YIN BOSHLANDI</b>\n\n"
+            "⚔️ Har bir o‘yinchiga yashirin rol berildi.\n"
+            "🌙 Birinchi tun boshlandi.\n\n"
+            "📩 Rolingiz va shaxsiy vazifalaringiz bot orqali yuboriladi."
+        )
+
+    @staticmethod
+    def night_started(game: GameState) -> str:
+        return (
+            f"🌙 <b>{game.day_number}-tun</b>\n\n"
+            "Qirollik tun bag‘riga kirdi.\n"
+            "🕯️ Har bir rol o‘zining tungi harakatini amalga oshirishi mumkin.\n\n"
+            f"⏱ Vaqt: <b>{game.night_time} soniya</b>"
+        )
+
+    @staticmethod
+    def day_started(game: GameState) -> str:
+        return (
+            f"☀️ <b>{game.day_number}-kun</b>\n\n"
+            "⚔️ Endi muhokama vaqti.\n"
+            "Har bir o‘yinchi o‘z fikrini bildirsin va shubhali harakatlarni muhokama qilsin.\n\n"
+            f"⏱ Muhokama vaqti: <b>{game.day_time} soniya</b>\n\n"
+            "🔔 Muhokama tugagach, ovoz berish shaxsiy chat orqali boshlanadi."
+        )
+
+    @staticmethod
+    def voting_started(game: GameState) -> str:
+        return (
+            "🗳️ <b>OVOZ BERISH BOSHLANDI</b>\n\n"
+            "Har bir tirik o‘yinchi faqat <b>1 ta ovoz</b> bera oladi.\n\n"
+            "⚖️ Barcha ovozlar teng hisoblanadi.\n"
+            "🚫 Durang bo‘lsa, hech kim chiqarilmaydi.\n"
+            "🚫 Ovoz bermaslik ham mumkin.\n\n"
+            f"⏱ Ovoz berish vaqti: <b>{game.vote_time} soniya</b>\n\n"
+            "📩 Ovoz berish tugmalari shaxsiy chatga yuboriladi."
+        )
+
+    @staticmethod
+    def voting_finished() -> str:
+        return (
+            "🗳️ <b>OVOZ BERISH YAKUNLANDI</b>\n\n"
+            "Natijalar hisoblanmoqda..."
+        )
+
+    @staticmethod
+    def no_elimination() -> str:
+        return (
+            "⚖️ <b>Hech kim chiqarilmadi.</b>\n\n"
+            "Ovozlar teng bo‘ldi yoki yetarli ovoz berilmadi."
+        )
+
+    @staticmethod
+    def player_eliminated(
+        player: PlayerState,
+        votes: int,
     ) -> str:
+        role = get_role(player.role) if player.role else None
+        role_name = role.name if role else "Noma’lum rol"
 
-        players = game.alive_players()
+        return (
+            "⚔️ <b>Ovoz berish natijasi</b>\n\n"
+            f"☠️ <b>{player.name}</b> qirollikdan chiqarildi.\n"
+            f"🗳️ Ovozlar: <b>{votes}</b>\n"
+            f"🎭 Roli: <b>{role_name}</b>"
+        )
 
-        lines = [
-            "👥 TIRIK O'YINCHILAR",
-            "",
-        ]
+    @staticmethod
+    def players_list(game: GameState) -> str:
+        lines = ["👥 <b>O‘yinchilar</b>\n"]
 
         for index, player in enumerate(
-            players,
+            game.players.values(),
             start=1,
         ):
-            lines.append(
-                f"{index}. {player.name}"
-            )
+            if not player.joined:
+                status = "🚪 Chiqdi"
+            elif player.alive:
+                status = "🟢 Tirik"
+            else:
+                status = "☠️ Halok bo‘lgan"
 
-        if not players:
             lines.append(
-                "Tirik o'yinchi qolmagan."
+                f"{index}. {player.name} — {status}"
             )
 
         return "\n".join(lines)
 
-    # =========================================================
-    # O'LIM
-    # =========================================================
-
     @staticmethod
     def death_message(
         player: PlayerState,
-        cause: str = "tun voqeasi",
+        cause: str = "night",
     ) -> str:
-
-        role = get_role(player.role)
-
-        role_name = (
-            role.name
-            if role is not None
-            else "Noma'lum rol"
-        )
-
         role_key = player.role or ""
+        name = player.name
 
-        special_messages = {
+        messages = {
             "shoh": (
-                f"👑 {player.name} qirollikdagi "
-                "so'nggi jangidan qaytmadi."
+                f"👑 {name} vafot etdi.\n"
+                "Qirollik taxti endi vorisga muhtoj."
             ),
             "malika": (
-                f"👸 {player.name} saroyni "
-                "himoya qila olmadi."
+                f"👸 {name} vafot etdi.\n"
+                "Saroyning himoya devori qulab tushdi."
             ),
             "shahzoda": (
-                f"🤴 {player.name}ning taxt sari yo'li "
-                "shu yerda yakunlandi."
+                f"🤴 {name} vafot etdi.\n"
+                "Taxt vorisi endi yo‘q."
             ),
             "vazir": (
-                f"🏛️ {player.name} saroy kengashidan ayrildi."
+                f"🏛️ {name} vafot etdi.\n"
+                "Qirollikning muhim sirlaridan biri yo‘qoldi."
             ),
             "bosh_qomondon": (
-                f"⚔️ {player.name} jang maydonida halok bo'ldi."
+                f"⚔️ {name} vafot etdi.\n"
+                "Qirollik qo‘shini bosh qo‘mondonidan ayrildi."
             ),
             "qirol_qoriqchisi": (
-                f"🛡️ {player.name} so'nggi himoya chizig'ida yiqildi."
+                f"🛡️ {name} vafot etdi.\n"
+                "Taxtning sodiq qo‘riqchisi halok bo‘ldi."
             ),
             "qazi": (
-                f"⚖️ {player.name} hukm chiqaradigan emas, "
-                "hukmga uchragan tomon bo'ldi."
+                f"⚖️ {name} vafot etdi.\n"
+                "Qirollik sudining ovozi jim bo‘ldi."
             ),
             "xazinachi": (
-                f"💰 {player.name} qirollik xazinasini "
-                "endi himoya qila olmaydi."
+                f"💰 {name} vafot etdi.\n"
+                "Qirollik xazinasi himoyachisini yo‘qotdi."
             ),
             "qishloq_aholisi": (
-                f"🏘️ {player.name} oddiy xalq orasidan "
-                "yana bir qurbon bo'ldi."
+                f"🏘️ {name} vafot etdi.\n"
+                "Oddiy xalq yana bir vakilidan ayrildi."
             ),
             "xizmatkor": (
-                f"🧹 {player.name} saroydagi xizmatini "
-                "endi davom ettira olmaydi."
+                f"🧹 {name} vafot etdi.\n"
+                "Saroydagi xizmatkor o‘z sirlarini olib ketdi."
             ),
             "ritsir": (
-                f"🏰⚔️ {player.name} zirhi ostida "
-                "so'nggi jangini o'tkazdi."
+                f"🏰⚔️ {name} vafot etdi.\n"
+                "Temir zirhli ritsir so‘nggi jangini o‘tkazdi."
             ),
             "aygoqchi": (
-                f"🕵️ {player.name} bilgan sirlar "
-                "o'zi bilan birga ketdi."
+                f"🕵️ {name} vafot etdi.\n"
+                "Qirollikning kuzatuvchisi endi hech kimni tekshira olmaydi."
             ),
             "soya_boshligi": (
-                f"🕶️ {player.name} soyalar ustidan "
-                "hukmronligini yo'qotdi."
+                f"🕶️ {name} vafot etdi.\n"
+                "Soya tomonining boshqaruvi zarbaga uchradi."
             ),
             "qotil": (
-                f"🗡️ {player.name}ning o'zi ovga aylandi."
+                f"🗡️ {name} vafot etdi.\n"
+                "Soya qotili endi nishon ola olmaydi."
             ),
             "josus": (
-                f"🕵️ {player.name endi hech kimni kuzata olmaydi."
+                f"🕵️ {name} endi hech kimni kuzata olmaydi."
             ),
             "soxta_maslahatchi": (
-                f"🎭 {player.name}ning niqobi tushdi."
+                f"🎭 {name} vafot etdi.\n"
+                "Yolg‘on maslahatlar manbai yo‘q qilindi."
             ),
             "xoin": (
-                f"🩸 {player.name}ning xiyonati "
-                "oxir-oqibat o'ziga qaytdi."
+                f"🩸 {name} vafot etdi.\n"
+                "Xoinning siri oshkor bo‘ldi."
             ),
             "qora_vazir": (
-                f"🖤 {player.name}ning qora rejasi barbod bo'ldi."
+                f"🖤 {name} vafot etdi.\n"
+                "Qora saroyning vaziri yo‘q."
             ),
             "dushman_qiroli": (
-                f"👑 {player.name} dushman taxtini "
-                "himoya qila olmadi."
+                f"👑 {name} vafot etdi.\n"
+                "Dushman taxtining egasi qulatildi."
             ),
             "dushman_qomondoni": (
-                f"⚔️ {player.name} qo'shinini boshqara olmay qoldi."
+                f"⚔️ {name} vafot etdi.\n"
+                "Dushman qo‘shini qo‘mondonidan ayrildi."
             ),
             "dushman_josusi": (
-                f"🕵️ {player.name}ning izlari shu yerda uzildi."
+                f"🕵️ {name} vafot etdi.\n"
+                "Dushman josusining ma’lumotlari endi jim."
             ),
             "dushman_suiqasddchisi": (
-                f"🗡️ {player.name} o'zining xavfli "
-                "vazifasini yakunlay olmadi."
+                f"🗡️ {name} vafot etdi.\n"
+                "Yashirin suiqasdchi yo‘q qilindi."
             ),
             "ovchi": (
-                f"🐺 {player.name}ning ovi tugadi."
+                f"🐺 {name} vafot etdi.\n"
+                "Ovchi o‘zining so‘nggi izini qoldirdi."
             ),
             "telba": (
-                f"🃏 {player.name}ning taqdirini "
-                "hech kim tushunib ulgurmay qoldi."
+                f"🃏 {name} vafot etdi.\n"
+                "Telbaning taqdiri nihoyat yakunlandi."
             ),
             "sayyoh": (
-                f"👤 {player.name}ning uzoq safari "
-                "shu yerda to'xtadi."
+                f"👤 {name} vafot etdi.\n"
+                "Sayyohning uzoq safari shu yerda tugadi."
             ),
             "yollanma_jangchi": (
-                f"⚔️ {player.name}ning navbatdagi "
-                "shartnomasi bajarilmadi."
+                f"⚔️ {name} vafot etdi.\n"
+                "Yollanma jangchi shartnomasini bajara olmadi."
             ),
             "surgun_shahzoda": (
-                f"🤴 {player.name}ning surgundagi yo'li yakunlandi."
+                f"🤴 {name} vafot etdi.\n"
+                "Surgundagi shahzodaning qaytish umidi so‘ndi."
             ),
-            "taxt_davogari": (
-                f"👑 {player.name} taxtga yetib bora olmadi."
+            "taxt_da_vogari": (
+                f"👑 {name} vafot etdi.\n"
+                "Taxt uchun da’vo shu yerda tugadi."
             ),
             "qaroqi": (
-                f"🥷 {player.name} o'g'irlangan boyliklari "
-                "bilan birga yo'qoldi."
+                f"🥷 {name} vafot etdi.\n"
+                "Qaroqchining yashirin yo‘li yopildi."
             ),
             "sehrgar": (
-                f"🧙 {player.name}ning sehrlari bu safar yetarli bo'lmadi."
+                f"🧙 {name} vafot etdi.\n"
+                "Sehr kuchi so‘ndi."
             ),
             "tabib": (
-                f"🩺 {player.name} boshqalarni davoladi, "
-                "ammo o'zini saqlab qola olmadi."
+                f"🩺 {name} vafot etdi.\n"
+                "Qirollik tabibi endi hech kimni davolay olmaydi."
             ),
             "kuzatuvchi": (
-                f"👁️ {player.name} kuzatgan so'nggi manzara shu bo'ldi."
+                f"👁️ {name} vafot etdi.\n"
+                "Kuzatuvchining ko‘zlari yumildi."
             ),
             "qorovul": (
-                f"🔒 {player.name}ning qorovulligi yakunlandi."
+                f"🔒 {name} vafot etdi.\n"
+                "Tun yo‘llarini to‘suvchi qorovul yo‘q."
             ),
             "solnomachi": (
-                f"📜 {player.name} yozib qoldirgan so'nggi sahifa yopildi."
+                f"📜 {name} vafot etdi.\n"
+                "Tarixni yozib boruvchi solnomachi jim bo‘ldi."
             ),
             "savdogar": (
-                f"💰 {player.name}ning bozordagi savdosi to'xtadi."
+                f"💰 {name} vafot etdi.\n"
+                "Bozorning savdogari yo‘q."
             ),
             "suiqasddchi": (
-                f"🗡️ {player.name}ning yashirin missiyasi fosh bo'ldi."
+                f"🗡️ {name} vafot etdi.\n"
+                "Yashirin pichoq egasi halok bo‘ldi."
             ),
         }
 
-        text = special_messages.get(
+        message = messages.get(
             role_key,
-            f"☠️ {player.name} o'yindan ayrildi.",
+            f"☠️ {name} vafot etdi.",
         )
+
+        if cause == "vote":
+            return (
+                f"{message}\n\n"
+                "🗳️ Sabab: kunduzgi ovoz berish."
+            )
 
         return (
-            f"{text}\n\n"
-            f"☠️ Roli: {role_name}\n"
-            f"📜 Sabab: {cause}"
+            f"{message}\n\n"
+            "🌙 Sabab: tungi voqea."
         )
-
-    # =========================================================
-    # ODDIY HIMOYA
-    # =========================================================
 
     @staticmethod
     def survived_attack(
         player: PlayerState,
+        reason: str,
     ) -> str:
-
-        role = get_role(player.role)
-
-        role_name = (
-            role.name
-            if role is not None
-            else "Noma'lum rol"
-        )
-
         return (
-            f"🛡️ {player.name} hujumdan omon qoldi.\n"
-            f"🎭 Roli: {role_name}"
+            f"🛡️ <b>{player.name}</b> tungi hujumdan omon qoldi.\n"
+            f"🔰 Sabab: {reason}"
         )
-
-    # =========================================================
-    # MAXSUS HODISA
-    # =========================================================
 
     @staticmethod
-    def special_event(
-        text: str,
-    ) -> str:
-
-        return (
-            "📜 MUHIM VOQEA\n\n"
-            f"{text}"
-        )
-
-    # =========================================================
-    # FAOLIYAT
-    # =========================================================
+    def special_event(message: str) -> str:
+        return f"✨ <b>Maxsus voqea</b>\n\n{message}"
 
     @staticmethod
     def inactivity_warning(
         player: PlayerState,
         nights_left: int,
     ) -> str:
-
         return (
-            f"⚠️ {player.name}, siz ketma-ket "
-            f"faol bo'lmayapsiz.\n\n"
-            f"🌙 Qolgan muddat: {nights_left} tun\n\n"
-            "Faol bo'lmasangiz, o'yindan chiqarilishingiz mumkin."
+            f"⚠️ <b>{player.name}</b>, siz ketma-ket faol bo‘lmadingiz.\n\n"
+            f"🌙 Qolgan muddat: <b>{nights_left} tun</b>\n"
+            "Agar faol bo‘lmasangiz, o‘yin sizni avtomatik chiqarishi mumkin."
         )
 
     @staticmethod
-    def inactivity_removed(
-        player: PlayerState,
-    ) -> str:
-
+    def inactivity_removed(player: PlayerState) -> str:
         return (
-            f"🚪 {player.name} faollik yetishmagani sababli "
-            "o'yindan chiqarildi."
+            f"🚪 <b>{player.name}</b> uzoq vaqt faol bo‘lmagani "
+            "sababli o‘yindan chiqarildi."
         )
-
-    # =========================================================
-    # SO'NGGI SO'Z
-    # =========================================================
 
     @staticmethod
-    def final_words(
-        player: PlayerState,
-        text: Optional[str],
-    ) -> str:
-
-        if text:
-            return (
-                f"🕯️ {player.name}ning so'nggi so'zi:\n\n"
-                f"“{text}”"
-            )
-
+    def final_words(player: PlayerState) -> str:
         return (
-            f"🕯️ {player.name} so'nggi so'z qoldirmadi."
+            f"📜 <b>{player.name}ning so‘nggi so‘zlari</b>\n\n"
+            "«O‘yin davom etadi...»"
         )
 
-    # =========================================================
-    # G'ALABA
-    # =========================================================
+    @staticmethod
+    def automatic_final_words(player: PlayerState) -> str:
+        return (
+            f"📜 <b>{player.name}ning so‘nggi so‘zlari</b>\n\n"
+            "«Men o‘z vazifamni bajardim. Qolgan taqdir sizniki...»"
+        )
 
     @staticmethod
     def victory(
         winner: str,
+        message: str | None = None,
     ) -> str:
-
-        icons = {
-            "TAHT": "👑",
-            "SOYA": "🕶️",
-            "YAKKA": "⚔️",
-            "MAXSUS": "✨",
-            "hech kim": "☠️",
-        }
-
-        icon = icons.get(
-            winner,
-            "🏆",
-        )
+        if message:
+            return (
+                "🏆 <b>THRONE — O‘YIN YAKUNLANDI</b>\n\n"
+                f"👑 G‘olib: <b>{winner}</b>\n\n"
+                f"{message}"
+            )
 
         return (
-            "🏆⚔️ THRONE — O'YIN YAKUNLANDI\n\n"
-            f"{icon} G'olib tomon: {winner}\n\n"
-            "Barcha natijalar qayd etildi."
+            "🏆 <b>THRONE — O‘YIN YAKUNLANDI</b>\n\n"
+            f"👑 G‘olib: <b>{winner}</b>\n\n"
+            "⚔️ Qirollikdagi barcha voqealar o‘z yakuniga yetdi."
         )
 
-    # =========================================================
-    # ROL OCHILISHI
-    # =========================================================
-
     @staticmethod
-    def role_reveal(
-        player: PlayerState,
-    ) -> str:
+    def role_card(player: PlayerState) -> str:
+        if not player.role:
+            return (
+                "🎭 <b>Sizga rol berilmadi.</b>"
+            )
 
         role = get_role(player.role)
 
         if role is None:
             return (
-                "🎭 Sizning rolingiz aniqlanmadi."
+                "🎭 <b>Rol</b>\n\n"
+                "Rol ma’lumoti topilmadi."
             )
 
         return (
-            "🎭 SIZNING ROLINGIZ\n\n"
+            "🎭 <b>SIZNING ROLINGIZ</b>\n\n"
             f"{role.name}\n\n"
-            f"⚔️ Tomon: {role.side.value}\n"
-            f"✨ Qobiliyat: {role.ability}\n\n"
-            f"🏆 G'alaba sharti:\n"
-            f"{role.win_condition}"
+            f"🏰 Tomon: <b>{role.side.value}</b>\n"
+            f"⚔️ Qobiliyat: {role.ability}\n\n"
+            f"🎯 G‘alaba sharti: {role.win_condition}"
         )
-
-    # =========================================================
-    # SOYA SHERIKLARI
-    # =========================================================
 
     @staticmethod
     def shadow_teammates(
         game: GameState,
         player: PlayerState,
     ) -> str:
-
-        if player.role is None:
-            return ""
-
-        player_role = get_role(player.role)
-
-        if player_role is None:
-            return ""
-
-        if player_role.side != Side.SHADOW:
+        if player.side != Side.SHOADOW.value:
             return ""
 
         teammates = []
 
         for other in game.players.values():
+            if (
+                other.user_id != player.user_id
+                and other.joined
+                and other.side == Side.SHOADOW.value
+            ):
+                role = get_role(other.role) if other.role else None
+                role_name = role.name if role else "Noma’lum rol"
 
-            if other.user_id == player.user_id:
-                continue
-
-            if not other.joined:
-                continue
-
-            role = get_role(other.role)
-
-            if role is None:
-                continue
-
-            if role.side != Side.SHADOW:
-                continue
-
-            teammates.append(
-                f"• {other.name} — {role.name}"
-            )
+                teammates.append(
+                    f"• {other.name} — {role_name}"
+                )
 
         if not teammates:
-            teammates.append(
-                "• Sizning hozircha sherigingiz yo'q."
+            return (
+                "🕶️ <b>SIZNING SHERIKLARINGIZ</b>\n\n"
+                "Hozircha boshqa Soya o‘yinchisi yo‘q."
             )
 
         return (
-            "🕶️ SIZNING SHERIKLARINGIZ\n\n"
-            "Soya tomoni o'yinchilari:\n"
+            "🕶️ <b>SIZNING SHERIKLARINGIZ</b>\n\n"
             + "\n".join(teammates)
         )
 
-    # =========================================================
-    # FAZA
-    # =========================================================
-
     @staticmethod
-    def phase_status(
-        game: GameState,
-    ) -> str:
-
+    def phase_status(game: GameState) -> str:
         phase_names = {
-            GamePhase.WAITING: "⏳ Kutish",
-            GamePhase.STARTING: "🚀 Boshlanish",
-            GamePhase.NIGHT: "🌙 Tun",
-            GamePhase.DAY: "☀️ Kun",
-            GamePhase.VOTING: "🗳️ Ovoz berish",
-            GamePhase.ENDED: "🏆 Yakunlangan",
+            GamePhase.WAITING: "Kutish",
+            GamePhase.STARTING: "Boshlanish",
+            GamePhase.NIGHT: "Tun",
+            GamePhase.DAY: "Kun",
+            GamePhase.VOTING: "Ovoz berish",
+            GamePhase.ENDED: "Yakunlangan",
         }
 
         phase_name = phase_names.get(
             game.phase,
-            "Noma'lum",
+            "Noma’lum",
         )
 
         return (
-            "👑 THRONE\n\n"
-            f"📍 Bosqich: {phase_name}\n"
-            f"📅 Kun: {game.day_number}\n"
-            f"👥 O'yinchilar: {game.player_count()}\n"
-            f"❤️ Tiriklar: {game.alive_count()}"
+            "👑 <b>THRONE</b>\n\n"
+            f"📍 Bosqich: <b>{phase_name}</b>\n"
+            f"🌙 Kun/tun: <b>{game.day_number}</b>\n"
+            f"👥 Tiriklar: <b>{game.alive_count()}</b>\n"
+            f"🎮 Jami o‘yinchilar: <b>{game.player_count()}</b>"
         )
-
-    # =========================================================
-    # YORDAM
-    # =========================================================
 
     @staticmethod
-    def rules_short() -> str:
-
+    def short_rules() -> str:
         return (
-            "📖 THRONE — QISQA QOIDALAR\n\n"
-            "👥 O'yin guruhda o'tkaziladi.\n"
-            "👑 O'yinni guruh administratori boshlaydi.\n"
-            "🎭 Har bir o'yinchiga yashirin rol beriladi.\n"
-            "🌙 Tunda rollar o'z qobiliyatlaridan foydalanadi.\n"
-            "☀️ Kunduzi o'yinchilar muhokama qiladi.\n"
-            "🗳️ Ovoz berishda har bir tirik o'yinchi 1 ta "
-            "ovozga ega.\n"
-            "⚖️ Durang bo'lsa hech kim chiqarilmaydi.\n"
-            "🏆 G'alaba sharti rol va tomoniga bog'liq."
-  )
+            "📖 <b>THRONE — Qisqa qoidalar</b>\n\n"
+            "👑 O‘yin guruhda o‘tkaziladi.\n"
+            "🎭 Har bir o‘yinchiga yashirin rol beriladi.\n"
+            "🌙 Tunda rollar o‘z qobiliyatlaridan foydalanadi.\n"
+            "☀️ Kunduzi o‘yinchilar muhokama qiladi.\n"
+            "🗳️ Har bir tirik o‘yinchi 1 ta ovozga ega.\n"
+            "⚖️ Barcha ovozlar teng hisoblanadi.\n"
+            "🚫 Durangda hech kim chiqarilmaydi.\n"
+            "☠️ Halok bo‘lgan o‘yinchilar ovoz bera olmaydi.\n"
+            "🏆 G‘alaba tomon yoki shaxsiy vazifaga bog‘liq."
+        )
